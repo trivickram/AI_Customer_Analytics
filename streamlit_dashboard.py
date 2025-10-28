@@ -39,57 +39,88 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for better styling with proper contrast
+# Custom CSS for better styling with proper contrast (works in both light and dark mode)
 st.markdown("""
     <style>
-    .main {
-        background-color: #f5f5f5;
-        color: #262730;
+    /* Force readable text colors regardless of theme */
+    .stMarkdown, .stText, p, span, div, label {
+        color: var(--text-color) !important;
     }
+    
+    h1, h2, h3, h4, h5, h6 {
+        color: var(--text-color) !important;
+    }
+    
+    /* Light theme (default) */
+    :root {
+        --text-color: #262730;
+        --bg-color: #ffffff;
+        --sidebar-bg: #f0f2f6;
+    }
+    
+    /* Dark theme detection */
+    @media (prefers-color-scheme: dark) {
+        :root {
+            --text-color: #fafafa;
+            --bg-color: #0e1117;
+            --sidebar-bg: #262730;
+        }
+    }
+    
+    /* Streamlit dark theme override */
+    [data-theme="dark"] {
+        --text-color: #fafafa !important;
+        --bg-color: #0e1117 !important;
+        --sidebar-bg: #262730 !important;
+    }
+    
+    [data-theme="dark"] .stMarkdown,
+    [data-theme="dark"] .stText,
+    [data-theme="dark"] p,
+    [data-theme="dark"] span,
+    [data-theme="dark"] div,
+    [data-theme="dark"] label {
+        color: #fafafa !important;
+    }
+    
+    [data-theme="dark"] h1,
+    [data-theme="dark"] h2,
+    [data-theme="dark"] h3,
+    [data-theme="dark"] h4,
+    [data-theme="dark"] h5,
+    [data-theme="dark"] h6 {
+        color: #fafafa !important;
+    }
+    
+    /* Tab styling */
     .stTabs [data-baseweb="tab-list"] {
         gap: 24px;
     }
+    
     .stTabs [data-baseweb="tab"] {
         height: 50px;
-        background-color: #ffffff;
         border-radius: 5px;
         padding: 10px 20px;
-        color: #262730;
     }
-    .metric-card {
-        background-color: white;
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    /* Fix white text on white background */
-    .stMarkdown, .stText, p, span, div {
-        color: #262730 !important;
-    }
-    h1, h2, h3, h4, h5, h6 {
-        color: #262730 !important;
-    }
-    .stDataFrame {
-        background-color: white;
-    }
-    /* Sidebar styling */
-    [data-testid="stSidebar"] {
-        background-color: #f0f2f6;
-    }
-    [data-testid="stSidebar"] * {
-        color: #262730 !important;
-    }
-    /* Button styling */
-    .stButton > button {
-        color: white !important;
-        background-color: #FF4B4B;
-    }
-    /* Metric styling */
+    
+    /* Metric styling for both themes */
     [data-testid="stMetricValue"] {
-        color: #262730 !important;
+        font-weight: 600;
     }
-    [data-testid="stMetricLabel"] {
-        color: #666666 !important;
+    
+    /* Button contrast */
+    .stButton > button {
+        font-weight: 500;
+    }
+    
+    /* Ensure expanders are readable */
+    [data-testid="stExpander"] {
+        border: 1px solid rgba(128, 128, 128, 0.2);
+    }
+    
+    /* Info/Warning/Success boxes */
+    .stAlert {
+        border-radius: 8px;
     }
     </style>
     """, unsafe_allow_html=True)
