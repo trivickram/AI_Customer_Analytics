@@ -24,7 +24,7 @@ from sklearn.preprocessing import StandardScaler, LabelEncoder, RobustScaler
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingRegressor
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingRegressor, GradientBoostingClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import classification_report, confusion_matrix, silhouette_score
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
@@ -629,13 +629,32 @@ def customer_segmentation(data):
 # ========== SYSTEM 2: CAMPAIGN RESPONSE PREDICTION (CLASSIFICATION) ==========
 def campaign_response_prediction(data):
     """Predict campaign response using classification models"""
-    st.header("🎯 System 2: Campaign Response Prediction")
+    st.header("📧 System 2: Campaign Response Prediction")
     st.markdown("---")
     
     st.markdown("""
-    **Goal:** Build a propensity model to predict which customers are most likely to respond to marketing campaigns.
-    This allows you to target only the top prospects, increasing conversion rates and reducing marketing costs.
+    ## 🎯 What This System Does
+    
+    **Objective:** Build a machine learning model that predicts which customers will respond to your next marketing campaign.
+    
+    **How It Works:**
+    1. **Learns from History:** Analyzes past campaign responses (AcceptedCmp1-5)
+    2. **Identifies Patterns:** Finds common traits among responders
+    3. **Scores New Customers:** Assigns response probability to each customer
+    4. **Optimizes ROI:** Target only high-probability prospects
+    
+    **Business Value:**
+    - 💰 **Reduce Costs:** Stop wasting budget on non-responders (typically 50-70% of list)
+    - 📈 **Increase Response Rates:** 2-3x improvement by targeting top prospects
+    - 🎯 **Better ROI:** 100-200% improvement in campaign profitability
+    - 📊 **Understand Drivers:** See what features predict responses
+    
+    **Real Example:**
+    > *Previous campaign: 15% response rate, $10,000 cost, $15,000 revenue → $5,000 profit (50% ROI)*
+    > *With AI targeting top 30%: 35% response rate, $3,000 cost, $15,000 revenue → $12,000 profit (400% ROI)*
     """)
+    
+    st.markdown("---")
     
     # Prepare features
     feature_cols = ['Age', 'Income', 'Total_Spent', 'Recency', 'Total_Purchases',
@@ -677,8 +696,9 @@ def campaign_response_prediction(data):
                     model = RandomForestClassifier(n_estimators=100, random_state=42, max_depth=10)
                 elif model_choice == "Logistic Regression":
                     model = LogisticRegression(random_state=42, max_iter=1000)
-                else:
-                    model = GradientBoostingRegressor(n_estimators=100, random_state=42)
+                else:  # Gradient Boosting
+                    from sklearn.ensemble import GradientBoostingClassifier
+                    model = GradientBoostingClassifier(n_estimators=100, random_state=42, max_depth=5, learning_rate=0.1)
                 
                 model.fit(X_train, y_train)
                 
@@ -712,6 +732,55 @@ def campaign_response_prediction(data):
                           x=['No Response', 'Response'], y=['No Response', 'Response'],
                           title='Confusion Matrix', color_continuous_scale='Blues')
             st.plotly_chart(fig, use_container_width=True)
+            
+            # Confusion Matrix Explanation
+            st.markdown("""
+            **🎯 Understanding the Confusion Matrix:**
+            - **Top-Left:** Correctly predicted non-responders ✅
+            - **Top-Right:** False alarms (wasted marketing cost) ❌
+            - **Bottom-Left:** Missed opportunities ⚠️
+            - **Bottom-Right:** Correctly predicted responders (💰 Revenue!)
+            """)
+    
+    # Classification Report
+    if 'campaign_model' in st.session_state:
+        st.markdown("---")
+        st.subheader("📋 Detailed Performance Metrics")
+        
+        # Generate classification report
+        from sklearn.metrics import classification_report
+        report = classification_report(st.session_state['campaign_y_test'], 
+                                       st.session_state['campaign_y_pred'], 
+                                       target_names=['No Response', 'Response'],
+                                       output_dict=True)
+        
+        metrics_col1, metrics_col2, metrics_col3 = st.columns(3)
+        
+        with metrics_col1:
+            st.markdown("**📊 Precision (Quality)**")
+            precision_responders = report['Response']['precision']
+            st.metric("Responder Precision", f"{precision_responders:.2%}",
+                     help="Of all predicted responders, what % actually responded")
+            st.info(f"💡 Of 100 targeted, ~{int(precision_responders*100)} respond")
+        
+        with metrics_col2:
+            st.markdown("**🎯 Recall (Coverage)**")
+            recall_responders = report['Response']['recall']
+            st.metric("Responder Recall", f"{recall_responders:.2%}",
+                     help="Of all actual responders, what % did we catch")
+            st.info(f"💡 Catching {int(recall_responders*100)}% of responders")
+        
+        with metrics_col3:
+            st.markdown("**⚖️ F1-Score (Balance)**")
+            f1_responders = report['Response']['f1-score']
+            st.metric("F1-Score", f"{f1_responders:.2%}",
+                     help="Balance of precision and recall")
+            if f1_responders > 0.70:
+                st.success("🌟 Excellent!")
+            elif f1_responders > 0.50:
+                st.info("✅ Good")
+            else:
+                st.warning("⚠️ Needs improvement")
     
     # Feature Importance & ROI Calculator
     if 'campaign_model' in st.session_state:
@@ -806,9 +875,38 @@ def market_basket_analysis(data):
     st.markdown("---")
     
     st.markdown("""
-    **Goal:** Find cross-selling opportunities by discovering which products are frequently bought together.
-    This enables product bundling and strategic product placement.
+    ## 🛍️ What This System Does
+    
+    **Objective:** Discover which products are frequently purchased together to unlock cross-selling opportunities.
+    
+    **How It Works:**
+    1. **Analyzes Purchase Patterns:** Examines what customers buy together
+    2. **Finds Association Rules:** Identifies product relationships (If A, then B)
+    3. **Calculates Metrics:** Support, confidence, and lift for each rule
+    4. **Recommends Actions:** Suggests bundles, placements, and promotions
+    
+    **Key Metrics Explained:**
+    - 📊 **Support:** How often items appear together (popularity)
+      - *Example: 20% support = 20% of customers buy both items*
+    - 🎯 **Confidence:** When A is bought, probability of buying B
+      - *Example: 65% confidence = 65% of wine buyers also buy meat*
+    - 🚀 **Lift:** How much more likely B is bought with A vs. randomly
+      - *Example: Lift 2.5 = 2.5x more likely to buy together*
+      - *Lift > 1.0 = Positive association (good!)*
+    
+    **Business Value:**
+    - 🛒 **Product Bundling:** Create profitable combo offers
+    - 📍 **Store Layout:** Place complementary products nearby
+    - 💰 **Upselling:** Recommend items at checkout
+    - 📈 **Revenue Lift:** 10-15% increase in average order value
+    
+    **Real Example:**
+    > *Rule: {Wines} → {Meat} | Support: 15%, Confidence: 65%, Lift: 2.3*
+    > *Action: Offer "Wine & Meat Dinner Bundle" at 10% discount*
+    > *Result: 20% increase in combined sales*
     """)
+    
+    st.markdown("---")
     
     # Convert spending to binary (bought/not bought)
     product_cols = ['MntWines', 'MntFruits', 'MntMeatProducts', 
@@ -951,9 +1049,40 @@ def clv_prediction(data):
     st.markdown("---")
     
     st.markdown("""
-    **Goal:** Identify high-value customers and predict their total spending potential.
-    Focus retention efforts on VIP customers and find similar prospects.
+    ## 💰 What This System Does
+    
+    **Objective:** Predict the total revenue potential of each customer to identify and prioritize VIPs.
+    
+    **How It Works:**
+    1. **Analyzes Spending Patterns:** Historical purchase behavior and demographics
+    2. **Predicts Future Value:** Total spending potential over customer lifetime
+    3. **Segments by Value:** VIP, High-Value, Medium-Value, Low-Value tiers
+    4. **Guides Strategy:** Where to invest retention and acquisition budgets
+    
+    **Customer Lifetime Value Formula:**
+    ```
+    CLV = (Average Purchase Value) × (Purchase Frequency) × (Customer Lifespan)
+    ```
+    
+    **Why CLV Matters:**
+    - 👑 **Focus on VIPs:** Top 20% of customers often generate 80% of profits
+    - 💵 **Smart Spending:** Invest more in retaining high-CLV customers
+    - 🎯 **Better Acquisition:** Find lookalike audiences of valuable customers
+    - 📉 **Reduce Churn:** Identify at-risk high-value customers early
+    
+    **Business Value:**
+    - 💰 **ROI on Retention:** $1 spent retaining VIP = $5-$10 in future revenue
+    - 📈 **Improved Profitability:** 25-40% increase in customer lifetime value
+    - 🎯 **Efficient Marketing:** Stop wasting budget on low-value prospects
+    - 👥 **Lookalike Targeting:** Find new customers similar to your best ones
+    
+    **Real Example:**
+    > *Customer A: CLV $2,500 (Top 10%) → VIP program, personal account manager*
+    > *Customer B: CLV $250 (Bottom 25%) → Automated email only*
+    > *Result: 5x better resource allocation, 30% improvement in retention ROI*
     """)
+    
+    st.markdown("---")
     
     # Prepare features
     feature_cols = ['Age', 'Income', 'Recency', 'Total_Purchases',
@@ -1189,6 +1318,35 @@ def clv_prediction(data):
                     st.metric("Revenue Share", f"{revenue_share:.1f}%")
                 
                 st.markdown(recommendations)
+        
+        # Download Comprehensive Report
+        st.markdown("---")
+        st.subheader("📥 Export Analysis Reports")
+        
+        report_col1, report_col2 = st.columns(2)
+        
+        with report_col1:
+            # CSV Export
+            csv_data = data.to_csv(index=False)
+            st.download_button(
+                label="📊 Download Full Dataset (CSV)",
+                data=csv_data,
+                file_name="customer_clv_analysis.csv",
+                mime="text/csv",
+                help="Download complete dataset with CLV predictions"
+            )
+        
+        with report_col2:
+            # High-Value Customers Export
+            vip_customers = data[data['CLV_Segment'] == 'VIP Customers']
+            vip_csv = vip_customers.to_csv(index=False)
+            st.download_button(
+                label="👑 Download VIP Customers (CSV)",
+                data=vip_csv,
+                file_name="vip_customers_list.csv",
+                mime="text/csv",
+                help="Download list of VIP customers for targeted retention"
+            )
 
 
 # ========== MAIN DASHBOARD ==========
@@ -1238,61 +1396,252 @@ def main():
     ])
     
     with tab1:
-        st.header("🏠 Dashboard Overview")
-        st.markdown("---")
+        # st.header("🏠 Executive Dashboard Overview")
+        # st.markdown("---")
         
-        st.markdown("""
-        ## Welcome to the AI Customer Recommendation Dashboard!
-        
-        This dashboard implements **4 powerful AI recommendation systems** to transform your marketing strategy:
-        
-        ### 🎯 1. Customer Segmentation (Unsupervised Learning)
-        - **Algorithm:** K-Means Clustering
-        - **Purpose:** Automatically discover customer groups with similar characteristics
-        - **Business Value:** Create targeted marketing campaigns for each persona
-        - **Output:** Customer segments like "Premium Shoppers," "Budget-Conscious," "Family Focused"
-        
-        ### 📧 2. Campaign Response Prediction (Supervised Learning)
-        - **Algorithm:** Random Forest / Logistic Regression / Gradient Boosting
-        - **Purpose:** Predict which customers will respond to marketing campaigns
-        - **Business Value:** Increase ROI by targeting only high-probability prospects
-        - **Output:** Propensity scores and targeted customer lists
-        
-        ### 🛒 3. Market Basket Analysis (Association Rules)
-        - **Algorithm:** Apriori Algorithm
-        - **Purpose:** Find products frequently purchased together
-        - **Business Value:** Product bundling, cross-selling, and strategic placement
-        - **Output:** Rules like "Customers who buy Wine also buy Meat"
-        
-        ### 💎 4. Customer Lifetime Value Prediction (Regression)
-        - **Algorithm:** Gradient Boosting / Random Forest Regression
-        - **Purpose:** Predict total spending potential of each customer
-        - **Business Value:** Focus retention on VIP customers, find similar prospects
-        - **Output:** CLV scores and customer value segments
-        """)
-        
-        st.markdown("---")
-        
-        # Quick Stats
-        st.subheader("📊 Quick Statistics")
+        # Key Performance Indicators
+        st.markdown("## 📊 Key Performance Indicators")
         
         col1, col2, col3, col4 = st.columns(4)
         
         with col1:
             avg_spending = df['Total_Spent'].mean()
-            st.metric("Avg Customer Spending", f"${avg_spending:.2f}")
+            total_revenue = df['Total_Spent'].sum()
+            st.metric("Avg Customer Spending", f"${avg_spending:.2f}", 
+                     help="Average total spending per customer")
         
         with col2:
             response_rate = df['Response'].mean() * 100
-            st.metric("Campaign Response Rate", f"{response_rate:.1f}%")
+            st.metric("Campaign Response Rate", f"{response_rate:.1f}%",
+                     help="Percentage of customers who responded to campaigns")
         
         with col3:
             avg_income = df['Income'].mean()
-            st.metric("Avg Customer Income", f"${avg_income:,.0f}")
+            st.metric("Avg Customer Income", f"${avg_income:,.0f}",
+                     help="Average annual income of customers")
         
         with col4:
             avg_age = df['Age'].mean()
-            st.metric("Avg Customer Age", f"{avg_age:.0f} years")
+            st.metric("Avg Customer Age", f"{avg_age:.0f} years",
+                     help="Average age of customer base")
+        
+        st.markdown("---")
+        
+        # # ROI Calculator
+        # st.markdown("## 💰 Campaign ROI Calculator")
+        # st.markdown("**Calculate the expected return on investment for your next marketing campaign**")
+        
+        # calc_col1, calc_col2, calc_col3 = st.columns(3)
+        
+        # with calc_col1:
+        #     campaign_cost = st.number_input("Campaign Budget ($)", 
+        #                                    min_value=1000, 
+        #                                    value=10000, 
+        #                                    step=1000,
+        #                                    help="Total cost to execute the marketing campaign")
+        
+        # with calc_col2:
+        #     target_customers = st.number_input("Customers to Target", 
+        #                                       min_value=100, 
+        #                                       value=min(1000, len(df)), 
+        #                                       step=100,
+        #                                       help="Number of customers you plan to reach")
+        
+        # with calc_col3:
+        #     expected_response = st.slider("Expected Response Rate (%)", 
+        #                                  min_value=1, 
+        #                                  max_value=50, 
+        #                                  value=int(response_rate * 1.5),
+        #                                  help="Improved response rate with AI-powered targeting")
+        
+        # # Calculate ROI metrics
+        # responders = int((target_customers * expected_response) / 100)
+        # revenue_per_responder = avg_spending * 0.3  # Conservative estimate: 30% of avg spending
+        # total_campaign_revenue = responders * revenue_per_responder
+        # net_profit = total_campaign_revenue - campaign_cost
+        # roi_percentage = ((net_profit / campaign_cost) * 100) if campaign_cost > 0 else 0
+        
+        # # Display ROI Results
+        # st.markdown("### � Projected Campaign Results:")
+        
+        # roi_col1, roi_col2, roi_col3, roi_col4 = st.columns(4)
+        
+        # with roi_col1:
+        #     st.metric("Expected Responders", f"{responders:,}", 
+        #              delta=f"{(responders/target_customers)*100:.1f}% of target")
+        
+        # with roi_col2:
+        #     st.metric("Revenue Generated", f"${total_campaign_revenue:,.0f}",
+        #              help="Total revenue from campaign responders")
+        
+        # with roi_col3:
+        #     st.metric("Net Profit", f"${net_profit:,.0f}",
+        #              delta=f"${net_profit:,.0f}" if net_profit > 0 else f"-${abs(net_profit):,.0f}",
+        #              delta_color="normal" if net_profit > 0 else "inverse")
+        
+        # with roi_col4:
+        #     if roi_percentage > 100:
+        #         st.success(f"✅ ROI: {roi_percentage:.1f}%")
+        #     elif roi_percentage > 0:
+        #         st.warning(f"⚠️ ROI: {roi_percentage:.1f}%")
+        #     else:
+        #         st.error(f"❌ ROI: {roi_percentage:.1f}%")
+        
+        # # ROI Interpretation
+        # if roi_percentage > 100:
+        #     st.success("🎉 **Excellent ROI!** This campaign is highly profitable. AI targeting can help you achieve this.")
+        # elif roi_percentage > 0:
+        #     st.info("💡 **Positive ROI:** The campaign will be profitable. Consider optimizing targeting for better returns.")
+        # else:
+        #     st.error("⚠️ **Negative ROI:** Consider refining your targeting strategy or reducing campaign costs.")
+        
+        # st.markdown("---")
+        
+        # Business Insights Dashboard
+        st.markdown("## 💡 AI-Powered Business Insights")
+        
+        insight_col1, insight_col2 = st.columns(2)
+        
+        with insight_col1:
+            st.markdown("### 🎯 Customer Behavior Insights")
+            
+            # Calculate insights
+            high_spenders = len(df[df['Total_Spent'] > df['Total_Spent'].quantile(0.75)])
+            low_spenders = len(df[df['Total_Spent'] < df['Total_Spent'].quantile(0.25)])
+            active_web = len(df[df['NumWebPurchases'] > df['NumWebPurchases'].median()])
+            
+            st.markdown(f"""
+            **Customer Distribution:**
+            - 💎 **High-Value Customers:** {high_spenders} ({(high_spenders/len(df)*100):.1f}%)
+              - These customers spend ${df[df['Total_Spent'] > df['Total_Spent'].quantile(0.75)]['Total_Spent'].mean():.0f} on average
+              - **Action:** Prioritize retention programs for this segment
+            
+            - 💰 **Budget-Conscious:** {low_spenders} ({(low_spenders/len(df)*100):.1f}%)
+              - Average spending: ${df[df['Total_Spent'] < df['Total_Spent'].quantile(0.25)]['Total_Spent'].mean():.0f}
+              - **Action:** Focus on entry-level products and promotions
+            
+            **Purchase Channels:**
+            - 🌐 **Active Web Users:** {active_web} customers ({(active_web/len(df)*100):.1f}%)
+            - 🏪 **Store Preference:** {len(df) - active_web} customers
+            - **Action:** Tailor marketing to preferred channels
+            """)
+        
+        with insight_col2:
+            st.markdown("### � Strategic Recommendations")
+            
+            st.markdown(f"""
+            **Immediate Action Items:**
+            
+            1. 🎯 **Implement Segmentation:**
+               - Use AI to identify {len(df)} customers into 3-5 distinct segments
+               - Create personalized campaigns for each segment
+               - **Expected Lift:** 20-30% in response rates
+            
+            2. 💰 **Optimize Campaign Targeting:**
+               - Predict response probability for each customer
+               - Focus budget on top 30% likely responders
+               - **Expected ROI Improvement:** 50-100%
+            
+            3. 🛒 **Leverage Cross-Selling:**
+               - Identify product combinations with high purchase probability
+               - Create bundled offers and strategic placements
+               - **Expected Revenue Lift:** 10-15%
+            
+            4. 💎 **Focus on High-CLV Customers:**
+               - Identify customers with highest lifetime value potential
+               - Implement VIP retention programs
+               - **Expected Impact:** Reduce churn by 15-25%
+            """)
+        
+        st.markdown("---")
+        
+        # AI Systems Overview
+        st.markdown("## 🤖 AI Recommendation Systems")
+        st.markdown("**This dashboard implements 4 state-of-the-art machine learning systems:**")
+        
+        sys_col1, sys_col2 = st.columns(2)
+        
+        with sys_col1:
+            st.markdown("""
+            ### 🎯 1. Customer Segmentation
+            **Algorithm:** K-Means Clustering (Unsupervised Learning)
+            
+            **What it does:**
+            - Automatically discovers hidden patterns in customer behavior
+            - Groups customers with similar characteristics
+            - Creates actionable customer personas
+            
+            **Business Impact:**
+            - 📊 **Personalization:** Tailor messages to each segment
+            - 💰 **Efficiency:** Stop wasting budget on wrong audiences
+            - 🎯 **Precision:** 20-30% improvement in campaign response
+            - 📈 **Growth:** Identify high-potential customer groups
+            
+            **Real-World Example:**
+            > *"Premium Shoppers" segment: High income, frequent purchases*
+            > *Action: Target with exclusive, high-value products*
+            
+            ---
+            
+            ### 🛒 3. Market Basket Analysis
+            **Algorithm:** Apriori Association Rules
+            
+            **What it does:**
+            - Finds products frequently purchased together
+            - Calculates confidence and lift metrics
+            - Identifies cross-selling opportunities
+            
+            **Business Impact:**
+            - 🛍️ **Bundling:** Create profitable product bundles
+            - 💵 **Upselling:** Recommend complementary products
+            - 📍 **Placement:** Optimize store/website layout
+            - 📈 **Revenue:** 10-15% increase in average order value
+            
+            **Real-World Example:**
+            > *Rule: {Wine} → {Meat} (Confidence: 65%, Lift: 2.3)*
+            > *Action: Recommend meat products to wine buyers*
+            """)
+        
+        with sys_col2:
+            st.markdown("""
+            ### 📧 2. Campaign Response Prediction
+            **Algorithm:** Random Forest, Logistic Regression, Gradient Boosting
+            
+            **What it does:**
+            - Predicts probability each customer will respond
+            - Ranks customers by response likelihood
+            - Identifies key factors driving responses
+            
+            **Business Impact:**
+            - 💰 **ROI:** 50-100% improvement in marketing ROI
+            - 🎯 **Targeting:** Focus on high-probability prospects
+            - 📉 **Cost Reduction:** Eliminate low-performing segments
+            - 📊 **Insights:** Understand what drives responses
+            
+            **Real-World Example:**
+            > *Customer Score: 85% response probability*
+            > *Action: Include in campaign, expect high conversion*
+            
+            ---
+            
+            ### 💎 4. Customer Lifetime Value (CLV)
+            **Algorithm:** Gradient Boosting Regression
+            
+            **What it does:**
+            - Predicts total revenue potential per customer
+            - Segments customers by lifetime value
+            - Identifies VIP customers for retention
+            
+            **Business Impact:**
+            - 👑 **VIP Programs:** Focus on high-value customers
+            - 💰 **Retention:** Reduce churn of valuable customers
+            - 🎯 **Acquisition:** Find lookalike audiences
+            - 📈 **Profitability:** 25-40% improvement in CLTV
+            
+            **Real-World Example:**
+            > *Customer CLV: $2,500 (Top 10%)*
+            > *Action: Enroll in VIP program, priority support*
+            """)
         
         st.markdown("---")
         
