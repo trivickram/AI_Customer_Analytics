@@ -351,16 +351,7 @@ def customer_segmentation(data):
                 """)
                 
                 # Reality check message for scores in the 0.20-0.30 range
-                if 0.20 <= silhouette_avg <= 0.35:
-                    st.info("""
-                    📊 **Industry Reality Check:** 
-                    
-                    Your score of {:.3f} is **exactly what professional data scientists get** with real customer data! 
-                    
-                    Unlike textbook examples (iris flowers 🌸 = 0.7+), customer behavior exists on a spectrum, not in neat boxes.
-                    
-                    **What matters most:** Can you take different marketing actions for each segment? If YES ✅, you've succeeded!
-                    """.format(silhouette_avg))
+                
                 
                 
                 # Store in session state
