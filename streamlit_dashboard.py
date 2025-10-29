@@ -136,13 +136,10 @@ def load_data():
 
 @st.cache_data
 def preprocess_data(df):
-    """Clean and engineer features for the dataset"""
-    # Make a copy
+
     data = df.copy()
-    
-    # Handle missing values
     data['Income'].fillna(data['Income'].median(), inplace=True)
-    
+
     # Feature Engineering
     # 1. Age from Year_Birth
     current_year = datetime.now().year
@@ -628,7 +625,6 @@ def customer_segmentation(data):
 
 # ========== SYSTEM 2: CAMPAIGN RESPONSE PREDICTION (CLASSIFICATION) ==========
 def campaign_response_prediction(data):
-    """Predict campaign response using classification models"""
     st.header("📧 System 2: Campaign Response Prediction")
     st.markdown("---")
     
@@ -770,17 +766,17 @@ def campaign_response_prediction(data):
                      help="Of all actual responders, what % did we catch")
             st.info(f"💡 Catching {int(recall_responders*100)}% of responders")
         
-        with metrics_col3:
-            st.markdown("**⚖️ F1-Score (Balance)**")
-            f1_responders = report['Response']['f1-score']
-            st.metric("F1-Score", f"{f1_responders:.2%}",
-                     help="Balance of precision and recall")
-            if f1_responders > 0.70:
-                st.success("🌟 Excellent!")
-            elif f1_responders > 0.50:
-                st.info("✅ Good")
-            else:
-                st.warning("⚠️ Needs improvement")
+        # with metrics_col3:
+        #     st.markdown("**⚖️ F1-Score (Balance)**")
+        #     f1_responders = report['Response']['f1-score']
+        #     st.metric("F1-Score", f"{f1_responders:.2%}",
+        #              help="Balance of precision and recall")
+        #     if f1_responders > 0.70:
+        #         st.success("🌟 Excellent!")
+        #     elif f1_responders > 0.50:
+        #         st.info("✅ Good")
+        #     else:
+        #         st.warning("⚠️ Needs improvement")
     
     # Feature Importance & ROI Calculator
     if 'campaign_model' in st.session_state:
@@ -882,7 +878,7 @@ def market_basket_analysis(data):
     **How It Works:**
     1. **Analyzes Purchase Patterns:** Examines what customers buy together
     2. **Finds Association Rules:** Identifies product relationships (If A, then B)
-    3. **Calculates Metrics:** Support, confidence, and lift for each rule
+    3. **Calculates Metrics:** Support and confidence for each rule
     4. **Recommends Actions:** Suggests bundles, placements, and promotions
     
     **Key Metrics Explained:**
@@ -890,18 +886,15 @@ def market_basket_analysis(data):
       - *Example: 20% support = 20% of customers buy both items*
     - 🎯 **Confidence:** When A is bought, probability of buying B
       - *Example: 65% confidence = 65% of wine buyers also buy meat*
-    - 🚀 **Lift:** How much more likely B is bought with A vs. randomly
-      - *Example: Lift 2.5 = 2.5x more likely to buy together*
-      - *Lift > 1.0 = Positive association (good!)*
     
     **Business Value:**
     - 🛒 **Product Bundling:** Create profitable combo offers
     - 📍 **Store Layout:** Place complementary products nearby
     - 💰 **Upselling:** Recommend items at checkout
-    - 📈 **Revenue Lift:** 10-15% increase in average order value
+    - 📈 **Revenue Growth:** 10-15% increase in average order value
     
     **Real Example:**
-    > *Rule: {Wines} → {Meat} | Support: 15%, Confidence: 65%, Lift: 2.3*
+    > *Rule: {Wines} → {Meat} | Support: 15%, Confidence: 65%*
     > *Action: Offer "Wine & Meat Dinner Bundle" at 10% discount*
     > *Result: 20% increase in combined sales*
     """)
@@ -937,8 +930,8 @@ def market_basket_analysis(data):
                                              min_threshold=min_confidence)
                     
                     if len(rules) > 0:
-                        # Calculate lift and sort
-                        rules = rules.sort_values('lift', ascending=False)
+                        # Sort by confidence
+                        rules = rules.sort_values('confidence', ascending=False)
                         
                         st.session_state['basket_rules'] = rules
                         st.session_state['frequent_itemsets'] = frequent_itemsets
@@ -963,15 +956,14 @@ def market_basket_analysis(data):
             # Select top rules
             top_n = st.slider("Show Top N Rules", 5, 20, 10)
             
-            display_cols = ['antecedents_str', 'consequents_str', 'support', 'confidence', 'lift']
+            display_cols = ['antecedents_str', 'consequents_str', 'support', 'confidence']
             display_df = rules_display[display_cols].head(top_n).copy()
-            display_df.columns = ['Antecedents', 'Consequents', 'Support', 'Confidence', 'Lift']
+            display_df.columns = ['Antecedents', 'Consequents', 'Support', 'Confidence']
             
             st.dataframe(
                 display_df.style.format({
                     'Support': '{:.3f}',
-                    'Confidence': '{:.3f}',
-                    'Lift': '{:.3f}'
+                    'Confidence': '{:.3f}'
                 }),
                 use_container_width=True
             )
@@ -983,7 +975,7 @@ def market_basket_analysis(data):
         col1, col2 = st.columns(2)
         
         with col1:
-            st.subheader("📈 Lift vs Confidence")
+            st.subheader("📈 Support vs Confidence")
             
             # Create a clean dataframe for plotting (without frozensets)
             plot_data = st.session_state['basket_rules'].copy()
@@ -992,12 +984,10 @@ def market_basket_analysis(data):
             plot_data['rule'] = plot_data['antecedents_str'] + ' → ' + plot_data['consequents_str']
             
             fig = px.scatter(plot_data, 
-                           x='confidence', y='lift', size='support',
+                           x='support', y='confidence', 
                            hover_data=['rule'],
-                           title='Association Rules: Lift vs Confidence',
-                           labels={'confidence': 'Confidence', 'lift': 'Lift'})
-            fig.add_hline(y=1, line_dash="dash", line_color="red", 
-                         annotation_text="Lift = 1 (Independence)")
+                           title='Association Rules: Support vs Confidence',
+                           labels={'support': 'Support', 'confidence': 'Confidence'})
             st.plotly_chart(fig, use_container_width=True)
         
         with col2:
@@ -1015,27 +1005,25 @@ def market_basket_analysis(data):
         st.markdown("---")
         st.subheader("💡 Cross-Selling Recommendations")
         
-        # Get top 5 rules with highest lift
-        top_rules = st.session_state['basket_rules'].nlargest(5, 'lift')
+        # Get top 5 rules with highest confidence
+        top_rules = st.session_state['basket_rules'].nlargest(5, 'confidence')
         
         for idx, rule in top_rules.iterrows():
             antecedents = list(rule['antecedents'])
             consequents = list(rule['consequents'])
             
             with st.expander(f"**Bundle Opportunity:** {', '.join(antecedents)} → {', '.join(consequents)}"):
-                col_a, col_b, col_c = st.columns(3)
+                col_a, col_b = st.columns(2)
                 
                 with col_a:
                     st.metric("Confidence", f"{rule['confidence']:.1%}")
                 with col_b:
-                    st.metric("Lift", f"{rule['lift']:.2f}x")
-                with col_c:
                     st.metric("Support", f"{rule['support']:.1%}")
                 
                 st.markdown(f"""
                 **Recommendation:**
                 - 🎁 Create a bundle: **"{', '.join(antecedents)} + {', '.join(consequents)} Combo"**
-                - 💰 Offer {10 + int(rule['lift'] * 2)}% discount on bundle
+                - 💰 Offer 10-15% discount on bundle
                 - 📍 Place {', '.join(consequents)} near {', '.join(antecedents)} in store
                 - 📧 Email customers who buy {', '.join(antecedents)} with {', '.join(consequents)} recommendations
                 - 🎯 {rule['confidence']*100:.0f}% of customers who buy {', '.join(antecedents)} also buy {', '.join(consequents)}
@@ -1192,14 +1180,7 @@ def clv_prediction(data):
                              labels={'Predicted_CLV': 'Predicted CLV ($)'})
             st.plotly_chart(fig, use_container_width=True)
         
-        with col2:
-            st.subheader("🎯 Customer Value Segments")
-            
-            segment_counts = data['CLV_Segment'].value_counts()
-            fig = px.pie(values=segment_counts.values, names=segment_counts.index,
-                        title='Customer Distribution by CLV Segment',
-                        color_discrete_sequence=px.colors.sequential.RdBu)
-            st.plotly_chart(fig, use_container_width=True)
+        
         
         # CLV Segment Analysis
         st.markdown("---")
@@ -1352,7 +1333,7 @@ def clv_prediction(data):
 # ========== MAIN DASHBOARD ==========
 def main():
     # Title and Header
-    st.title("🎯 AI-Powered Customer Recommendation Dashboard")
+    st.title("🎯 AI-Powered Customer Analytics Dashboard")
     st.markdown("### Transform Your Marketing with 4 Advanced AI Systems")
     
     # Load data
@@ -1370,7 +1351,7 @@ def main():
         st.subheader("📊 Dataset Overview")
         st.metric("Total Customers", f"{len(df):,}")
         st.metric("Features", f"{len(df.columns)}")
-        st.metric("Date Range", f"{df['Customer_Days'].max()} days")
+        # st.metric("Date Range", f"{df['Customer_Days'].max()} days")
         
         st.markdown("---")
         
