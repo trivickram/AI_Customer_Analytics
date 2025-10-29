@@ -1,11 +1,3 @@
-"""
-AI-Powered Customer Segmentation & Recommendation Dashboard
-Implements 4 AI Recommendation Systems:
-1. Customer Segmentation (K-Means Clustering)
-2. Campaign Response Prediction (Classification)
-3. Market Basket Analysis (Association Rules)
-4. Customer Lifetime Value Prediction (Regression)
-"""
 
 import streamlit as st
 import pandas as pd
@@ -629,25 +621,7 @@ def campaign_response_prediction(data):
     st.markdown("---")
     
     st.markdown("""
-    ## 🎯 What This System Does
-    
-    **Objective:** Build a machine learning model that predicts which customers will respond to your next marketing campaign.
-    
-    **How It Works:**
-    1. **Learns from History:** Analyzes past campaign responses (AcceptedCmp1-5)
-    2. **Identifies Patterns:** Finds common traits among responders
-    3. **Scores New Customers:** Assigns response probability to each customer
-    4. **Optimizes ROI:** Target only high-probability prospects
-    
-    **Business Value:**
-    - 💰 **Reduce Costs:** Stop wasting budget on non-responders (typically 50-70% of list)
-    - 📈 **Increase Response Rates:** 2-3x improvement by targeting top prospects
-    - 🎯 **Better ROI:** 100-200% improvement in campaign profitability
-    - 📊 **Understand Drivers:** See what features predict responses
-    
-    **Real Example:**
-    > *Previous campaign: 15% response rate, $10,000 cost, $15,000 revenue → $5,000 profit (50% ROI)*
-    > *With AI targeting top 30%: 35% response rate, $3,000 cost, $15,000 revenue → $12,000 profit (400% ROI)*
+    **Objective:** Predict which customers will respond to marketing campaigns to optimize targeting and improve ROI.
     """)
     
     st.markdown("---")
@@ -728,20 +702,11 @@ def campaign_response_prediction(data):
                           x=['No Response', 'Response'], y=['No Response', 'Response'],
                           title='Confusion Matrix', color_continuous_scale='Blues')
             st.plotly_chart(fig, use_container_width=True)
-            
-            # Confusion Matrix Explanation
-            st.markdown("""
-            **🎯 Understanding the Confusion Matrix:**
-            - **Top-Left:** Correctly predicted non-responders ✅
-            - **Top-Right:** False alarms (wasted marketing cost) ❌
-            - **Bottom-Left:** Missed opportunities ⚠️
-            - **Bottom-Right:** Correctly predicted responders (💰 Revenue!)
-            """)
     
     # Classification Report
     if 'campaign_model' in st.session_state:
         st.markdown("---")
-        st.subheader("📋 Detailed Performance Metrics")
+        st.subheader("📋 Performance Metrics")
         
         # Generate classification report
         from sklearn.metrics import classification_report
@@ -753,30 +718,19 @@ def campaign_response_prediction(data):
         metrics_col1, metrics_col2, metrics_col3 = st.columns(3)
         
         with metrics_col1:
-            st.markdown("**📊 Precision (Quality)**")
             precision_responders = report['Response']['precision']
-            st.metric("Responder Precision", f"{precision_responders:.2%}",
+            st.metric("Precision", f"{precision_responders:.2%}",
                      help="Of all predicted responders, what % actually responded")
-            st.info(f"💡 Of 100 targeted, ~{int(precision_responders*100)} respond")
         
         with metrics_col2:
-            st.markdown("**🎯 Recall (Coverage)**")
             recall_responders = report['Response']['recall']
-            st.metric("Responder Recall", f"{recall_responders:.2%}",
+            st.metric("Recall", f"{recall_responders:.2%}",
                      help="Of all actual responders, what % did we catch")
-            st.info(f"💡 Catching {int(recall_responders*100)}% of responders")
         
-        # with metrics_col3:
-        #     st.markdown("**⚖️ F1-Score (Balance)**")
-        #     f1_responders = report['Response']['f1-score']
-        #     st.metric("F1-Score", f"{f1_responders:.2%}",
-        #              help="Balance of precision and recall")
-        #     if f1_responders > 0.70:
-        #         st.success("🌟 Excellent!")
-        #     elif f1_responders > 0.50:
-        #         st.info("✅ Good")
-        #     else:
-        #         st.warning("⚠️ Needs improvement")
+        with metrics_col3:
+            f1_responders = report['Response']['f1-score']
+            st.metric("F1-Score", f"{f1_responders:.2%}",
+                     help="Balance of precision and recall")
     
     # Feature Importance & ROI Calculator
     if 'campaign_model' in st.session_state:
@@ -871,32 +825,7 @@ def market_basket_analysis(data):
     st.markdown("---")
     
     st.markdown("""
-    ## 🛍️ What This System Does
-    
-    **Objective:** Discover which products are frequently purchased together to unlock cross-selling opportunities.
-    
-    **How It Works:**
-    1. **Analyzes Purchase Patterns:** Examines what customers buy together
-    2. **Finds Association Rules:** Identifies product relationships (If A, then B)
-    3. **Calculates Metrics:** Support and confidence for each rule
-    4. **Recommends Actions:** Suggests bundles, placements, and promotions
-    
-    **Key Metrics Explained:**
-    - 📊 **Support:** How often items appear together (popularity)
-      - *Example: 20% support = 20% of customers buy both items*
-    - 🎯 **Confidence:** When A is bought, probability of buying B
-      - *Example: 65% confidence = 65% of wine buyers also buy meat*
-    
-    **Business Value:**
-    - 🛒 **Product Bundling:** Create profitable combo offers
-    - 📍 **Store Layout:** Place complementary products nearby
-    - 💰 **Upselling:** Recommend items at checkout
-    - 📈 **Revenue Growth:** 10-15% increase in average order value
-    
-    **Real Example:**
-    > *Rule: {Wines} → {Meat} | Support: 15%, Confidence: 65%*
-    > *Action: Offer "Wine & Meat Dinner Bundle" at 10% discount*
-    > *Result: 20% increase in combined sales*
+    **Objective:** Discover which products are frequently purchased together to identify cross-selling opportunities and product bundling strategies.
     """)
     
     st.markdown("---")
@@ -1037,37 +966,7 @@ def clv_prediction(data):
     st.markdown("---")
     
     st.markdown("""
-    ## 💰 What This System Does
-    
-    **Objective:** Predict the total revenue potential of each customer to identify and prioritize VIPs.
-    
-    **How It Works:**
-    1. **Analyzes Spending Patterns:** Historical purchase behavior and demographics
-    2. **Predicts Future Value:** Total spending potential over customer lifetime
-    3. **Segments by Value:** VIP, High-Value, Medium-Value, Low-Value tiers
-    4. **Guides Strategy:** Where to invest retention and acquisition budgets
-    
-    **Customer Lifetime Value Formula:**
-    ```
-    CLV = (Average Purchase Value) × (Purchase Frequency) × (Customer Lifespan)
-    ```
-    
-    **Why CLV Matters:**
-    - 👑 **Focus on VIPs:** Top 20% of customers often generate 80% of profits
-    - 💵 **Smart Spending:** Invest more in retaining high-CLV customers
-    - 🎯 **Better Acquisition:** Find lookalike audiences of valuable customers
-    - 📉 **Reduce Churn:** Identify at-risk high-value customers early
-    
-    **Business Value:**
-    - 💰 **ROI on Retention:** $1 spent retaining VIP = $5-$10 in future revenue
-    - 📈 **Improved Profitability:** 25-40% increase in customer lifetime value
-    - 🎯 **Efficient Marketing:** Stop wasting budget on low-value prospects
-    - 👥 **Lookalike Targeting:** Find new customers similar to your best ones
-    
-    **Real Example:**
-    > *Customer A: CLV $2,500 (Top 10%) → VIP program, personal account manager*
-    > *Customer B: CLV $250 (Bottom 25%) → Automated email only*
-    > *Result: 5x better resource allocation, 30% improvement in retention ROI*
+    **Objective:** Predict total revenue potential of each customer to identify high-value customers and optimize retention strategies.
     """)
     
     st.markdown("---")
