@@ -9,7 +9,13 @@ import plotly.graph_objects as go
 from datetime import datetime
 from scipy import stats
 import warnings
+from dotenv import load_dotenv
+import os
+
 warnings.filterwarnings('ignore')
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Machine Learning Libraries
 from sklearn.preprocessing import StandardScaler, LabelEncoder, RobustScaler
@@ -23,6 +29,10 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from mlxtend.frequent_patterns import apriori, association_rules
 from mlxtend.preprocessing import TransactionEncoder
 
+# LLM Libraries for Chatbot
+import os
+import json
+
 # Set page configuration
 st.set_page_config(
     page_title="AI Customer Recommendation Dashboard",
@@ -34,54 +44,31 @@ st.set_page_config(
 # Custom CSS for better styling with proper contrast (works in both light and dark mode)
 st.markdown("""
     <style>
-    /* Force readable text colors regardless of theme */
-    .stMarkdown, .stText, p, span, div, label {
-        color: var(--text-color) !important;
+    /* Force dark text on light background for all text elements */
+    body {
+        color: #000000 !important;
+        background-color: #ffffff !important;
+    }
+    
+    .stMarkdown, .stMarkdown p, .stMarkdown span, .stMarkdown div {
+        color: #000000 !important;
+    }
+    
+    .stText, p, span, div, label {
+        color: #000000 !important;
     }
     
     h1, h2, h3, h4, h5, h6 {
-        color: var(--text-color) !important;
+        color: #1f1f1f !important;
     }
     
-    /* Light theme (default) */
-    :root {
-        --text-color: #262730;
-        --bg-color: #ffffff;
-        --sidebar-bg: #f0f2f6;
+    /* Sidebar text */
+    [data-testid="stSidebar"] {
+        background-color: #f0f2f6 !important;
     }
     
-    /* Dark theme detection */
-    @media (prefers-color-scheme: dark) {
-        :root {
-            --text-color: #fafafa;
-            --bg-color: #0e1117;
-            --sidebar-bg: #262730;
-        }
-    }
-    
-    /* Streamlit dark theme override */
-    [data-theme="dark"] {
-        --text-color: #fafafa !important;
-        --bg-color: #0e1117 !important;
-        --sidebar-bg: #262730 !important;
-    }
-    
-    [data-theme="dark"] .stMarkdown,
-    [data-theme="dark"] .stText,
-    [data-theme="dark"] p,
-    [data-theme="dark"] span,
-    [data-theme="dark"] div,
-    [data-theme="dark"] label {
-        color: #fafafa !important;
-    }
-    
-    [data-theme="dark"] h1,
-    [data-theme="dark"] h2,
-    [data-theme="dark"] h3,
-    [data-theme="dark"] h4,
-    [data-theme="dark"] h5,
-    [data-theme="dark"] h6 {
-        color: #fafafa !important;
+    [data-testid="stSidebar"] * {
+        color: #000000 !important;
     }
     
     /* Tab styling */
@@ -93,16 +80,38 @@ st.markdown("""
         height: 50px;
         border-radius: 5px;
         padding: 10px 20px;
+        color: #000000 !important;
     }
     
-    /* Metric styling for both themes */
+    /* Metric values */
     [data-testid="stMetricValue"] {
         font-weight: 600;
+        color: #000000 !important;
+    }
+    
+    [data-testid="stMetricLabel"] {
+        color: #000000 !important;
+    }
+    
+    [data-testid="stMetricDelta"] {
+        color: #000000 !important;
     }
     
     /* Button contrast */
     .stButton > button {
         font-weight: 500;
+        color: #ffffff !important;
+        background-color: #0066cc !important;
+    }
+    
+    /* Dataframe text */
+    [data-testid="stDataFrame"] * {
+        color: #000000 !important;
+    }
+    
+    /* Input fields */
+    input, textarea, select {
+        color: #000000 !important;
     }
     
     /* Ensure expanders are readable */
@@ -110,9 +119,39 @@ st.markdown("""
         border: 1px solid rgba(128, 128, 128, 0.2);
     }
     
+    [data-testid="stExpander"] * {
+        color: #000000 !important;
+    }
+    
     /* Info/Warning/Success boxes */
     .stAlert {
         border-radius: 8px;
+    }
+    
+    /* Selectbox and other widgets */
+    [data-baseweb="select"] * {
+        color: #000000 !important;
+    }
+    
+    /* Slider labels */
+    [data-testid="stSlider"] * {
+        color: #000000 !important;
+    }
+    
+    /* Number input */
+    [data-testid="stNumberInput"] * {
+        color: #000000 !important;
+    }
+    
+    /* Text input */
+    [data-testid="stTextInput"] * {
+        color: #000000 !important;
+    }
+    
+    /* Download button */
+    [data-testid="stDownloadButton"] button {
+        color: #ffffff !important;
+        background-color: #28a745 !important;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -186,15 +225,17 @@ def preprocess_data(df):
         'YOLO': 'Single'
     })
     
+    # 11. Add aliases for compatibility with advanced AI features
+    data['MntTotal'] = data['Total_Spent']
+    data['AcceptedCmpOverall'] = data['Total_Campaigns_Accepted']
+    
     return data
 
 
 @st.cache_data
 def encode_features(data):
-    """Encode categorical features for ML models"""
     encoded_data = data.copy()
     
-    # Label encoding for categorical variables
     le = LabelEncoder()
     
     categorical_cols = ['Education_Simplified', 'Marital_Status_Simplified']
@@ -259,7 +300,7 @@ def customer_segmentation(data):
     X_clean = X[outlier_mask]
     data_clean = data_enhanced.loc[X_clean.index]
     
-    st.info(f"📊 Using {len(clustering_features)} carefully selected features. Removed {len(X) - len(X_clean)} outliers ({(len(X) - len(X_clean))/len(X)*100:.1f}%)")
+    # st.info(f"📊 Using {len(clustering_features)} carefully selected features. Removed {len(X) - len(X_clean)} outliers ({(len(X) - len(X_clean))/len(X)*100:.1f}%)")
     
     # Standardize features with RobustScaler (better for outliers)
     from sklearn.preprocessing import RobustScaler
@@ -620,12 +661,6 @@ def campaign_response_prediction(data):
     st.header("📧 System 2: Campaign Response Prediction")
     st.markdown("---")
     
-    st.markdown("""
-    **Objective:** Predict which customers will respond to marketing campaigns to optimize targeting and improve ROI.
-    """)
-    
-    st.markdown("---")
-    
     # Prepare features
     feature_cols = ['Age', 'Income', 'Total_Spent', 'Recency', 'Total_Purchases',
                    'NumWebPurchases', 'NumCatalogPurchases', 'NumStorePurchases',
@@ -824,12 +859,6 @@ def market_basket_analysis(data):
     st.header("🛒 System 3: Market Basket Analysis")
     st.markdown("---")
     
-    st.markdown("""
-    **Objective:** Discover which products are frequently purchased together to identify cross-selling opportunities and product bundling strategies.
-    """)
-    
-    st.markdown("---")
-    
     # Convert spending to binary (bought/not bought)
     product_cols = ['MntWines', 'MntFruits', 'MntMeatProducts', 
                    'MntFishProducts', 'MntSweetProducts', 'MntGoldProds']
@@ -963,12 +992,6 @@ def market_basket_analysis(data):
 def clv_prediction(data):
     """Predict customer lifetime value using regression"""
     st.header("💎 System 4: Customer Lifetime Value (CLV) Prediction")
-    st.markdown("---")
-    
-    st.markdown("""
-    **Objective:** Predict total revenue potential of each customer to identify high-value customers and optimize retention strategies.
-    """)
-    
     st.markdown("---")
     
     # Prepare features
@@ -1233,7 +1256,7 @@ def clv_prediction(data):
 def main():
     # Title and Header
     st.title("🎯 AI-Powered Customer Analytics Dashboard")
-    st.markdown("### Transform Your Marketing with 4 Advanced AI Systems")
+    # st.markdown("### Transform Your Marketing with 4 AI Systems")
     
     # Load data
     with st.spinner("Loading customer data..."):
@@ -1436,93 +1459,6 @@ def main():
         st.markdown("---")
         
         # AI Systems Overview
-        st.markdown("## 🤖 AI Recommendation Systems")
-        st.markdown("**This dashboard implements 4 state-of-the-art machine learning systems:**")
-        
-        sys_col1, sys_col2 = st.columns(2)
-        
-        with sys_col1:
-            st.markdown("""
-            ### 🎯 1. Customer Segmentation
-            **Algorithm:** K-Means Clustering (Unsupervised Learning)
-            
-            **What it does:**
-            - Automatically discovers hidden patterns in customer behavior
-            - Groups customers with similar characteristics
-            - Creates actionable customer personas
-            
-            **Business Impact:**
-            - 📊 **Personalization:** Tailor messages to each segment
-            - 💰 **Efficiency:** Stop wasting budget on wrong audiences
-            - 🎯 **Precision:** 20-30% improvement in campaign response
-            - 📈 **Growth:** Identify high-potential customer groups
-            
-            **Real-World Example:**
-            > *"Premium Shoppers" segment: High income, frequent purchases*
-            > *Action: Target with exclusive, high-value products*
-            
-            ---
-            
-            ### 🛒 3. Market Basket Analysis
-            **Algorithm:** Apriori Association Rules
-            
-            **What it does:**
-            - Finds products frequently purchased together
-            - Calculates confidence and lift metrics
-            - Identifies cross-selling opportunities
-            
-            **Business Impact:**
-            - 🛍️ **Bundling:** Create profitable product bundles
-            - 💵 **Upselling:** Recommend complementary products
-            - 📍 **Placement:** Optimize store/website layout
-            - 📈 **Revenue:** 10-15% increase in average order value
-            
-            **Real-World Example:**
-            > *Rule: {Wine} → {Meat} (Confidence: 65%, Lift: 2.3)*
-            > *Action: Recommend meat products to wine buyers*
-            """)
-        
-        with sys_col2:
-            st.markdown("""
-            ### 📧 2. Campaign Response Prediction
-            **Algorithm:** Random Forest, Logistic Regression, Gradient Boosting
-            
-            **What it does:**
-            - Predicts probability each customer will respond
-            - Ranks customers by response likelihood
-            - Identifies key factors driving responses
-            
-            **Business Impact:**
-            - 💰 **ROI:** 50-100% improvement in marketing ROI
-            - 🎯 **Targeting:** Focus on high-probability prospects
-            - 📉 **Cost Reduction:** Eliminate low-performing segments
-            - 📊 **Insights:** Understand what drives responses
-            
-            **Real-World Example:**
-            > *Customer Score: 85% response probability*
-            > *Action: Include in campaign, expect high conversion*
-            
-            ---
-            
-            ### 💎 4. Customer Lifetime Value (CLV)
-            **Algorithm:** Gradient Boosting Regression
-            
-            **What it does:**
-            - Predicts total revenue potential per customer
-            - Segments customers by lifetime value
-            - Identifies VIP customers for retention
-            
-            **Business Impact:**
-            - 👑 **VIP Programs:** Focus on high-value customers
-            - 💰 **Retention:** Reduce churn of valuable customers
-            - 🎯 **Acquisition:** Find lookalike audiences
-            - 📈 **Profitability:** 25-40% improvement in CLTV
-            
-            **Real-World Example:**
-            > *Customer CLV: $2,500 (Top 10%)*
-            > *Action: Enroll in VIP program, priority support*
-            """)
-        
         st.markdown("---")
         
         # Data Preview
@@ -1553,6 +1489,10 @@ def main():
     with tab5:
         clv_prediction(df)
     
+    # AI Chatbot Section
+    st.markdown("---")
+    ai_chatbot(df)
+    
     # Footer
     st.markdown("---")
     st.markdown("""
@@ -1561,6 +1501,186 @@ def main():
         Data-Driven Marketing Excellence</p>
     </div>
     """, unsafe_allow_html=True)
+
+
+# ============================================================================
+# AI CHATBOT FEATURE
+# ============================================================================
+
+def ai_chatbot(df):
+    """AI-Powered Chatbot using Gemini API"""
+    st.markdown("## 💬 AI Customer Insights Chatbot")
+    st.markdown("Ask questions about your customer data in natural language!")
+    
+    # Get API key from environment
+    api_key = os.getenv('GEMINI_API_KEY')
+    
+    if not api_key:
+        st.error("⚠️ Gemini API key not found in .env file!")
+        return
+    
+    # Initialize chat history
+    if 'chat_history' not in st.session_state:
+        st.session_state.chat_history = []
+    
+    if 'selected_query' not in st.session_state:
+        st.session_state.selected_query = ''
+    
+    # Prepare data context
+    context = {
+        "total_customers": len(df),
+        "avg_age": float(df['Age'].mean()),
+        "age_range": f"{int(df['Age'].min())} to {int(df['Age'].max())}",
+        "avg_income": float(df['Income'].mean()),
+        "total_revenue": float(df['Total_Spent'].sum()),
+        "avg_spending": float(df['Total_Spent'].mean()),
+        "campaign_response_rate": float(df['Total_Campaigns_Accepted'].sum() / (len(df) * 6) * 100),
+        "high_value_customers": int((df['Total_Spent'] > df['Total_Spent'].quantile(0.75)).sum()),
+        "at_risk_customers": int((df['Recency'] > 90).sum()),
+    }
+    
+    # Example questions
+    st.markdown("#### 💡 Quick Questions:")
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        if st.button("📊 High-Value Customers", use_container_width=True):
+            st.session_state.selected_query = "What are the key characteristics of my high-value customers?"
+    
+    with col2:
+        if st.button("🎯 Reduce Churn", use_container_width=True):
+            st.session_state.selected_query = "What strategies can I use to reduce customer churn?"
+    
+    with col3:
+        if st.button("💰 Increase Revenue", use_container_width=True):
+            st.session_state.selected_query = "What are the best strategies to increase customer revenue?"
+    
+    with col4:
+        if st.button("📧 Target Segments", use_container_width=True):
+            st.session_state.selected_query = "Which customer segments should I target for the next campaign?"
+    
+    st.markdown("---")
+    
+    # Chat input
+    user_query = st.text_input(
+        "💬 Your Question:",
+        value=st.session_state.selected_query,
+        placeholder="Ask anything about your customers...",
+        key="chat_input_field"
+    )
+    
+    col1, col2 = st.columns([1, 5])
+    with col1:
+        send_button = st.button("🚀 Ask AI", type="primary")
+    with col2:
+        if st.button("🗑️ Clear Chat"):
+            st.session_state.chat_history = []
+            st.session_state.selected_query = ''
+            st.rerun()
+    
+    # Process query
+    if send_button and user_query:
+        with st.spinner("🤔 AI is thinking..."):
+            try:
+                response = get_gemini_response(user_query, context, api_key)
+                
+                # Add to chat history
+                st.session_state.chat_history.append({
+                    "question": user_query,
+                    "answer": response
+                })
+                st.session_state.selected_query = ''
+                
+            except Exception as e:
+                st.error(f"❌ Error: {str(e)}")
+    
+    # Display chat history
+    if st.session_state.chat_history:
+        st.markdown("---")
+        st.markdown("### 📝 Conversation History")
+        
+        for i, chat in enumerate(reversed(st.session_state.chat_history)):
+            st.markdown(f"""
+            <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                        padding: 15px; border-radius: 10px; margin: 10px 0;'>
+                <p style='color: white; margin: 0; font-size: 16px;'><b>🧑 You:</b> {chat['question']}</p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            st.markdown(f"""
+            <div style='background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); 
+                        padding: 5px 15px; border-radius: 10px; margin: 5px 0 10px 0;'>
+                <p style='color: white; margin: 0; font-size: 14px;'><b>🤖 AI Assistant</b></p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            st.markdown(chat['answer'])
+            
+            if i < len(st.session_state.chat_history) - 1:
+                st.markdown("---")
+
+
+def get_gemini_response(query, context, api_key):
+    """Get response from Google Gemini API"""
+    try:
+        import requests
+        
+        system_prompt = f"""You are an expert customer analytics AI assistant analyzing this data:
+
+**Customer Base:**
+- Total: {context['total_customers']:,} customers
+- Age: {context['avg_age']:.1f} years (range: {context['age_range']})
+- Income: ${context['avg_income']:,.2f} average
+- Revenue: ${context['total_revenue']:,.2f} total
+- Spending: ${context['avg_spending']:,.2f} per customer
+- Campaign Response: {context['campaign_response_rate']:.1f}%
+- High-Value: {context['high_value_customers']} customers ({(context['high_value_customers']/context['total_customers']*100):.1f}%)
+- At-Risk: {context['at_risk_customers']} customers ({(context['at_risk_customers']/context['total_customers']*100):.1f}%)
+
+Provide detailed, data-driven insights with specific recommendations. Use markdown formatting (###, **, -) for clarity."""
+
+        data = {
+            "contents": [{
+                "parts": [{
+                    "text": f"{system_prompt}\n\n**Question:** {query}\n\nProvide actionable insights:"
+                }]
+            }],
+            "generationConfig": {
+                "temperature": 0.7,
+                "maxOutputTokens": 2048,
+            }
+        }
+        
+        # Use v1 API with gemini-2.5-flash model (latest available)
+        response = requests.post(
+            f"https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key={api_key}",
+            json=data,
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            result = response.json()
+            if 'candidates' in result and len(result['candidates']) > 0:
+                return result['candidates'][0]['content']['parts'][0]['text']
+            else:
+                return "⚠️ No response from Gemini. Please try again."
+        elif response.status_code == 400:
+            error_detail = response.json()
+            return f"⚠️ Invalid API request: {error_detail.get('error', {}).get('message', 'Unknown error')}"
+        elif response.status_code == 403:
+            return f"⚠️ API key permission denied. Please verify your key at https://aistudio.google.com/apikey"
+        elif response.status_code == 429:
+            return f"⚠️ Rate limit exceeded. Please wait a moment and try again."
+        else:
+            error_text = response.text[:300] if len(response.text) > 300 else response.text
+            return f"⚠️ API Error ({response.status_code}): {error_text}"
+            
+    except requests.exceptions.Timeout:
+        return "⚠️ Request timed out. Please try again."
+    except requests.exceptions.ConnectionError:
+        return "⚠️ Connection error. Please check your internet connection."
+    except Exception as e:
+        return f"⚠️ Error: {str(e)}"
 
 
 if __name__ == "__main__":
