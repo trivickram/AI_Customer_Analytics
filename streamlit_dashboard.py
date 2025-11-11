@@ -9,13 +9,18 @@ import plotly.graph_objects as go
 from datetime import datetime
 from scipy import stats
 import warnings
-from dotenv import load_dotenv
 import os
 
 warnings.filterwarnings('ignore')
 
-# Load environment variables from .env file
-load_dotenv()
+# Try to load environment variables from .env file (for local development)
+# On Streamlit Cloud, use st.secrets instead
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    # dotenv not installed, will use Streamlit secrets or environment variables
+    pass
 
 # Machine Learning Libraries
 from sklearn.preprocessing import StandardScaler, LabelEncoder, RobustScaler
@@ -1512,11 +1517,21 @@ def ai_chatbot(df):
     st.markdown("## 💬 AI Customer Insights Chatbot")
     st.markdown("Ask questions about your customer data in natural language!")
     
-    # Get API key from environment
+    # Get API key from environment or Streamlit secrets
     api_key = os.getenv('GEMINI_API_KEY')
     
+    # If not in environment, try Streamlit secrets (for Streamlit Cloud)
     if not api_key:
-        st.error("⚠️ Gemini API key not found in .env file!")
+        try:
+            api_key = st.secrets.get("GEMINI_API_KEY")
+        except (AttributeError, FileNotFoundError):
+            pass
+    
+    if not api_key:
+        st.warning("⚠️ Gemini API key not configured. Please set GEMINI_API_KEY in Streamlit secrets or environment variables.")
+        st.info("📝 **To enable the AI chatbot:**\n\n" + 
+                "**On Streamlit Cloud:** Go to 'Manage app' → 'Settings' → 'Secrets' and add:\n```\nGEMINI_API_KEY = \"your-api-key-here\"\n```\n\n" +
+                "**For local development:** Create a `.streamlit/secrets.toml` file or `.env` file with:\n```\nGEMINI_API_KEY=your-api-key-here\n```")
         return
     
     # Initialize chat history
