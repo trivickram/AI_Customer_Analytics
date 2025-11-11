@@ -9,7 +9,14 @@ import plotly.graph_objects as go
 from datetime import datetime
 from scipy import stats
 import warnings
-from dotenv import load_dotenv
+# Make dotenv import resilient on environments where it's not installed (like some Streamlit hosts)
+try:
+    from dotenv import load_dotenv
+except Exception:
+    # Provide a no-op fallback so missing package won't crash the app; env vars may still be provided by the host.
+    def load_dotenv(*args, **kwargs):
+        return None
+
 import os
 
 warnings.filterwarnings('ignore')
